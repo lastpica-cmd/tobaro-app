@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TOBARO - 토석 매칭 챗봇</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        .chat-container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            height: 80vh;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .chat-header {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 20px 20px 0 0;
+            text-align: center;
+        }
+        
+        .chat-header h1 {
+            margin: 0;
+            font-size: 1.8rem;
+            font-weight: 600;
+        }
+        
+        .chat-header p {
+            margin: 5px 0 0 0;
+            opacity: 0.9;
+            font-size: 0.9rem;
+        }
+        
+        .chat-messages {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            background: #f8f9fa;
+        }
+        
+        .message {
+            margin-bottom: 15px;
+            display: flex;
+            align-items: flex-start;
+        }
+        
+        .message.user {
+            justify-content: flex-end;
+        }
+        
+        .message.bot {
+            justify-content: flex-start;
+        }
+        
+        .message-content {
+            max-width: 70%;
+            padding: 12px 16px;
+            border-radius: 18px;
+            word-wrap: break-word;
+        }
+        
+        .message.user .message-content {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-bottom-right-radius: 5px;
+        }
+        
+        .message.bot .message-content {
+            background: white;
+            color: #333;
+            border: 1px solid #e9ecef;
+            border-bottom-left-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        
+        .message-avatar {
+            width: 35px;
+            height: 35px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 10px;
+            font-size: 16px;
+        }
+        
+        .message.user .message-avatar {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        
+        .message.bot .message-avatar {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+        }
+        
+        .chat-input {
+            padding: 20px;
+            background: white;
+            border-radius: 0 0 20px 20px;
+            border-top: 1px solid #e9ecef;
+        }
+        
+        .input-group {
+            position: relative;
+        }
+        
+        .form-control {
+            border-radius: 25px;
+            border: 2px solid #e9ecef;
+            padding: 12px 20px;
+            font-size: 16px;
+            transition: all 0.3s ease;
+        }
+        
+        .form-control:focus {
+            border-color: #667eea;
+            box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+        }
+        
+        .btn-send {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-send:hover {
+            transform: scale(1.05);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+        
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 10px;
+            color: #666;
+        }
+        
+        .loading i {
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .example-queries {
+            margin-top: 15px;
+        }
+        
+        .example-query {
+            display: inline-block;
+            background: #e9ecef;
+            color: #495057;
+            padding: 5px 12px;
+            border-radius: 15px;
+            margin: 3px;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .example-query:hover {
+            background: #667eea;
+            color: white;
+        }
+        
+        .result-table {
+            margin-top: 10px;
+            font-size: 0.9rem;
+        }
+        
+        .result-table table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        .result-table th,
+        .result-table td {
+            padding: 8px;
+            text-align: left;
+            border-bottom: 1px solid #dee2e6;
+        }
+        
+        .result-table th {
+            background: #f8f9fa;
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body>
+    <div class="container-fluid h-100 d-flex align-items-center justify-content-center">
+        <div class="col-md-8 col-lg-6">
+            <div class="chat-container">
+                <!-- 헤더 -->
+                <div class="chat-header">
+                    <h1><i class="fas fa-mountain"></i> TOBARO</h1>
+                    <p>토석정보공유시스템 챗봇 - 자연어로 토사를 찾아보세요!</p>
+                </div>
+                
+                <!-- 메시지 영역 -->
+                <div class="chat-messages" id="chatMessages">
+                    <div class="message bot">
+                        <div class="message-avatar">
+                            <i class="fas fa-robot"></i>
+                        </div>
+                        <div class="message-content">
+                            안녕하세요! TOBARO 토석 매칭 챗봇입니다. 🏔️<br>
+                            자연어로 토사 관련 질문을 해주세요!<br><br>
+                            <strong>예시:</strong><br>
+                            • "예산군에서 제방 복구용 토석을 어디서 구할 수 있어?"<br>
+                            • "예천군에서 농사용 흙 500m³ 필요해"
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 로딩 -->
+                <div class="loading" id="loading">
+                    <i class="fas fa-spinner"></i> 토사 매칭 중...
+                </div>
+                
+                <!-- 입력 영역 -->
+                <div class="chat-input">
+                    <div class="input-group">
+                        <input type="text" class="form-control" id="messageInput" 
+                               placeholder="토사 관련 질문을 입력하세요..." 
+                               autocomplete="off">
+                        <button class="btn btn-send" id="sendButton" type="button">
+                            <i class="fas fa-paper-plane"></i>
+                        </button>
+                    </div>
+                    
+                    <!-- 예시 쿼리 -->
+                    <div class="example-queries">
+                        <small class="text-muted">빠른 질문:</small><br>
+                        <span class="example-query" onclick="sendExampleQuery('예산군에서 제방 복구용 토석을 어디서 구할 수 있어?')">예산군 제방 복구용 토석</span>
+                        <span class="example-query" onclick="sendExampleQuery('예천군에서 농사용 흙 500m³ 필요해')">예천군 농사용 흙</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        const chatMessages = document.getElementById('chatMessages');
+        const messageInput = document.getElementById('messageInput');
+        const sendButton = document.getElementById('sendButton');
+        const loading = document.getElementById('loading');
+
+        // 메시지 전송
+        function sendMessage() {
+            const message = messageInput.value.trim();
+            if (!message) return;
+
+            // 사용자 메시지 추가
+            addMessage(message, 'user');
+            messageInput.value = '';
+
+            // 로딩 표시
+            showLoading();
+
+            // API 호출
+            fetch('/ask', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ text: message })
+            })
+            .then(response => response.json())
+            .then(data => {
+                hideLoading();
+                handleResponse(data);
+            })
+            .catch(error => {
+                hideLoading();
+                addMessage('죄송합니다. 오류가 발생했습니다. 다시 시도해주세요.', 'bot');
+                console.error('Error:', error);
+            });
+        }
+
+        // 예시 쿼리 전송
+        function sendExampleQuery(query) {
+            messageInput.value = query;
+            sendMessage();
+        }
+
+        // 메시지 추가
+        function addMessage(content, sender) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${sender}`;
+            
+            const avatar = document.createElement('div');
+            avatar.className = 'message-avatar';
+            avatar.innerHTML = sender === 'user' ? '<i class="fas fa-user"></i>' : '<i class="fas fa-robot"></i>';
+            
+            const messageContent = document.createElement('div');
+            messageContent.className = 'message-content';
+            messageContent.innerHTML = content;
+            
+            messageDiv.appendChild(avatar);
+            messageDiv.appendChild(messageContent);
+            chatMessages.appendChild(messageDiv);
+            
+            // 스크롤을 맨 아래로
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        // 응답 처리
+        function handleResponse(data) {
+            if (data.error) {
+                addMessage(`오류: ${data.message}`, 'bot');
+                return;
+            }
+
+            let responseText = '';
+
+            // 의도별 응답 처리
+            if (data.route && data.route.intent === 'MATCH_FIND') {
+                if (data.table && data.table.length > 0) {
+                    responseText = `🔍 <strong>토사 매칭 결과</strong><br><br>`;
+                    
+                    // 요약 정보
+                    if (data.summary) {
+                        responseText += `<small class="text-muted">${data.summary.join(', ')}</small><br><br>`;
+                    }
+                    
+                    // 결과 테이블
+                    responseText += `<div class="result-table">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>공급처</th>
+                                    <th>거리</th>
+                                    <th>용량</th>
+                                    <th>토질</th>
+                                    <th>점수</th>
+                                </tr>
+                            </thead>
+                            <tbody>`;
+                    
+                    data.table.forEach(item => {
+                        responseText += `
+                            <tr>
+                                <td>${item.name}</td>
+                                <td>${item.distance_km}km</td>
+                                <td>${item.capacity_m3}m³</td>
+                                <td>${item.soil_type}</td>
+                                <td><span class="badge bg-primary">${item.score}</span></td>
+                            </tr>`;
+                    });
+                    
+                    responseText += `</tbody></table></div>`;
+                } else {
+                    responseText = `😔 조건에 맞는 토사 공급처를 찾을 수 없습니다.<br><br>`;
+                    if (data.suggestions) {
+                        responseText += `<strong>제안:</strong><br>`;
+                        data.suggestions.forEach(suggestion => {
+                            responseText += `• ${suggestion}<br>`;
+                        });
+                    }
+                }
+            } else if (data.route && data.route.intent === 'SMALLTALK') {
+                responseText = `안녕하세요! TOBARO 토석 매칭 챗봇입니다. 🏔️<br>토사 관련 질문을 해주시면 도움을 드릴게요!`;
+            } else if (data.route && data.route.intent === 'LAW_QA') {
+                responseText = `📋 <strong>법규 문의</strong><br><br>죄송합니다. 법규 관련 기능은 준비 중입니다.<br>현재는 토사 매칭 서비스만 이용하실 수 있습니다.`;
+            } else if (data.followup) {
+                responseText = data.followup;
+                if (data.suggestions) {
+                    responseText += `<br><br><strong>도움말:</strong><br>`;
+                    data.suggestions.forEach(suggestion => {
+                        responseText += `• ${suggestion}<br>`;
+                    });
+                }
+            } else {
+                responseText = data.message || '응답을 처리할 수 없습니다.';
+            }
+
+            addMessage(responseText, 'bot');
+        }
+
+        // 로딩 표시/숨김
+        function showLoading() {
+            loading.style.display = 'block';
+        }
+
+        function hideLoading() {
+            loading.style.display = 'none';
+        }
+
+        // 이벤트 리스너
+        sendButton.addEventListener('click', sendMessage);
+        messageInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                sendMessage();
+            }
+        });
+
+        // 입력창 포커스
+        messageInput.focus();
+    </script>
+</body>
+</html>

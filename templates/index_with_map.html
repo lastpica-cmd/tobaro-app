@@ -1,0 +1,1947 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <title>TOBARO - 토석 매칭 챗봇</title>
+    <link rel="icon" href="data:,">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script type="text/javascript" src="//dapi.kakao.com/v2/maps/sdk.js?appkey=cc393f84546f58b913c7314ad5a9e445&autoload=false&libraries=services"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+    <script>console.log('TOBARO build = 2025-10-08-01');</script>
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+        }
+        
+        .main-container {
+            display: flex;
+            gap: 20px;
+            height: 90vh;
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+        
+        .chat-section {
+            flex: 1.2;
+            min-width: 500px;
+        }
+        
+        .map-section {
+            flex: 0.95;
+            min-width: 400px;
+        }
+        
+        .chat-container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .map-container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            height: 100%;
+            position: relative;
+        }
+        
+        .chat-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 20px 20px 0 0;
+            text-align: center;
+        }
+        
+        .chat-header h1 {
+            margin: 0;
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+        
+        .chat-header p {
+            margin: 5px 0 0 0;
+            opacity: 0.9;
+            font-size: 0.9rem;
+        }
+        
+        .chat-messages {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        
+        .message {
+            display: flex;
+            gap: 10px;
+            max-width: 80%;
+        }
+        
+        .message.user {
+            align-self: flex-end;
+            flex-direction: row-reverse;
+        }
+        
+        .message.bot {
+            align-self: flex-start;
+        }
+        
+        .message-avatar {
+            width: 35px;
+            height: 35px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            flex-shrink: 0;
+        }
+        
+        .message.user .message-avatar {
+            background: #667eea;
+            color: white;
+        }
+        
+        .message.bot .message-avatar {
+            background: #e9ecef;
+            color: #495057;
+        }
+        
+        .message-content {
+            background: #f8f9fa;
+            padding: 12px 16px;
+            border-radius: 18px;
+            font-size: 0.9rem;
+            line-height: 1.4;
+        }
+        
+        .message.user .message-content {
+            background: #667eea;
+            color: white;
+        }
+        
+        .chat-input {
+            padding: 20px;
+            border-top: 1px solid #e9ecef;
+            display: flex;
+            gap: 10px;
+        }
+        
+        .chat-input input {
+            flex: 1;
+            padding: 12px 16px;
+            border: 2px solid #e9ecef;
+            border-radius: 25px;
+            font-size: 0.9rem;
+            outline: none;
+            transition: border-color 0.3s ease;
+        }
+        
+        .chat-input input:focus {
+            border-color: #667eea;
+        }
+        
+        .chat-input button {
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 45px;
+            height: 45px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .chat-input button:hover {
+            background: #5a6fd8;
+            transform: scale(1.05);
+        }
+        
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+            color: #6c757d;
+        }
+        
+        .loading i {
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .example-queries {
+            margin-top: 15px;
+        }
+        
+        .example-query {
+            display: inline-block;
+            background: #e9ecef;
+            color: #495057;
+            padding: 5px 12px;
+            border-radius: 15px;
+            margin: 3px;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .example-query:hover {
+            background: #667eea;
+            color: white;
+        }
+        
+        .result-table {
+            margin-top: 10px;
+            font-size: 0.9rem;
+            overflow-x: auto;
+        }
+        
+        .result-table table {
+            width: 100%;
+            border-collapse: collapse;
+            table-layout: auto;
+        }
+        
+        .result-table th,
+        .result-table td {
+            padding: 8px;
+            text-align: center;
+            border-bottom: 1px solid #dee2e6;
+            white-space: nowrap;
+            vertical-align: middle;
+        }
+        
+        .result-table th {
+            background: #f8f9fa;
+            font-weight: 600;
+        }
+        
+        /* 단위 텍스트 스타일 */
+        .result-table th small {
+            font-size: 0.8em;
+            color: #666;
+            font-weight: 400;
+        }
+        
+        /* 순위 컬럼 너비 조정 및 가운데 정렬 */
+        .result-table th:nth-child(1),
+        .result-table td:nth-child(1) {
+            width: auto;
+            min-width: 80px;
+            max-width: 100px;
+            text-align: center !important;
+            vertical-align: middle !important;
+        }
+        
+        .result-table td:nth-child(1) .badge {
+            display: block !important;
+            margin: 0 auto !important;
+            text-align: center !important;
+            width: fit-content !important;
+        }
+        
+        /* 더 구체적인 선택자로 우선순위 강화 */
+        .result-table tbody tr td:nth-child(1) .badge {
+            display: block !important;
+            margin: 0 auto !important;
+            text-align: center !important;
+            width: fit-content !important;
+        }
+        
+        /* 순위 배지 전용 스타일 - 최고 우선순위 */
+        .rank-badge {
+            display: block !important;
+            margin: 0 auto !important;
+            text-align: center !important;
+            width: fit-content !important;
+        }
+        
+        /* 인라인 스타일과 함께 작동하도록 추가 보장 */
+        .result-table td:nth-child(1) span.badge.rank-badge {
+            display: block !important;
+            margin: 0 auto !important;
+            text-align: center !important;
+            width: fit-content !important;
+        }
+        
+        /* 공급처 컬럼 너비 조정 및 말줄임 효과 */
+        .result-table th:nth-child(2),
+        .result-table td:nth-child(2) {
+            width: 25%;
+            min-width: 150px;
+        }
+        
+        .col-supplier {
+            max-width: 160px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        
+        /* 다른 컬럼들 너비 조정 (점수 컬럼 제거 후) */
+        .result-table th:nth-child(3),
+        .result-table td:nth-child(3) { width: 12%; }  /* 거리 */
+        .result-table th:nth-child(4),
+        .result-table td:nth-child(4) { width: 16%; } /* 가용 공급량 */
+        .result-table th:nth-child(5),
+        .result-table td:nth-child(5) { width: 14%; } /* 토석유형 */
+        .result-table th:nth-child(6),
+        .result-table td:nth-child(6) { width: 16%; } /* 적합용도 */
+        .result-table th:nth-child(7),
+        .result-table td:nth-child(7) { width: 16%; } /* 운송비 */
+        
+        .map-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px 20px;
+            border-radius: 20px 20px 0 0;
+            text-align: center;
+        }
+        
+        .map-header h1 {
+            margin: 0;
+            font-size: 1.3rem;
+            font-weight: 600;
+        }
+        
+        .map-header p {
+            margin: 5px 0 0 0;
+            opacity: 0.9;
+            font-size: 0.85rem;
+        }
+        
+        .map-content {
+            height: calc(100% - 80px);
+            position: relative;
+        }
+        
+        #map {
+            width: 100%;
+            height: 100%;
+            border-radius: 0 0 20px 20px;
+        }
+        
+        .map-info {
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+            right: 10px;
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 8px 12px;
+            border-radius: 8px;
+            font-size: 0.8rem;
+            text-align: center;
+            z-index: 1000;
+        }
+        
+        .landuse-toggle-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(76, 175, 80, 0.9);
+            border: none;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            z-index: 1001;
+            color: white;
+        }
+        
+        .landuse-toggle-btn:hover {
+            background: rgba(76, 175, 80, 1);
+            transform: scale(1.1);
+        }
+        
+        .landuse-toggle-btn.active {
+            background: rgba(255, 152, 0, 0.9);
+        }
+        
+        .landuse-toggle-btn.active:hover {
+            background: rgba(255, 152, 0, 1);
+        }
+        
+        .route-toggle-btn {
+            position: absolute;
+            top: 10px;
+            right: 60px;
+            background: rgba(0, 123, 255, 0.9);
+            border: none;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            z-index: 1001;
+            color: white;
+        }
+        
+        .route-toggle-btn:hover {
+            background: rgba(0, 123, 255, 1);
+            transform: scale(1.1);
+        }
+        
+        .route-toggle-btn.active {
+            background: rgba(220, 53, 69, 0.9);
+        }
+        
+        .route-toggle-btn.active:hover {
+            background: rgba(220, 53, 69, 1);
+        }
+        
+        /* 토지 이용 현황 차트 스타일 */
+        .landuse-results {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            grid-template-rows: auto auto;
+            gap: 10px;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 10px;
+        }
+        
+        .landuse-chart-container {
+            background: white;
+            border-radius: 10px;
+            padding: 15px;
+            margin: 0;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            width: 100%;
+            max-width: 280px;
+            margin: 0 auto;
+        }
+        
+        .landuse-chart-title {
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+        
+        .landuse-chart-wrapper {
+            position: relative;
+            height: 150px; /* 200px에서 150px로 축소 */
+            margin-bottom: 8px; /* 10px에서 8px로 축소 */
+        }
+        
+        .landuse-legend {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 4px; /* 8px에서 4px로 축소 */
+            font-size: 0.7rem; /* 0.8rem에서 0.7rem으로 축소 */
+            margin-top: 8px; /* 10px에서 8px로 축소 */
+        }
+        
+        .landuse-legend-item {
+            display: flex;
+            align-items: center;
+            gap: 3px; /* 4px에서 3px로 축소 */
+            color: #333;
+            font-weight: 500;
+        }
+        
+        .landuse-legend-color {
+            width: 10px; /* 12px에서 10px로 축소 */
+            height: 10px; /* 12px에서 10px로 축소 */
+            border-radius: 2px;
+            flex-shrink: 0;
+        }
+        
+        .landuse-legend-item span {
+            color: #333;
+            font-size: 0.65rem; /* 0.75rem에서 0.65rem으로 축소 */
+            white-space: nowrap;
+        }
+        
+        .badge {
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+        
+        .bg-primary {
+            background-color: #007bff !important;
+            color: white;
+        }
+        
+        @media (max-width: 768px) {
+            .main-container {
+                flex-direction: column;
+                height: auto;
+            }
+            
+            .chat-section,
+            .map-section {
+                min-width: auto;
+                height: 50vh;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="main-container">
+        <!-- 채팅 섹션 -->
+        <div class="chat-section">
+            <div class="chat-container">
+                <div class="chat-header">
+                    <h1><i class="fas fa-robot"></i> TOBARO</h1>
+                    <p>토석정보공유시스템 챗봇 - 자연어로 토사를 찾아보세요!</p>
+                </div>
+                
+                <div class="chat-messages" id="chatMessages">
+                    <div class="message bot">
+                        <div class="message-avatar">
+                            <i class="fas fa-robot"></i>
+                        </div>
+                        <div class="message-content">
+                            안녕하세요! TOBARO 토석 매칭 챗봇입니다. 🏔️<br>
+                            자연어로 토사 관련 질문을 해주세요!<br><br>
+                            <strong>예시 질문:</strong><br>
+                            <div class="example-queries">
+                                <span class="example-query" onclick="sendExampleQuery('예산군에서 제방 복구용 토석을 어디서 구할 수 있어?')">예산군에서 제방 복구용 토석을 어디서 구할 수 있어?</span>
+                                <span class="example-query" onclick="sendExampleQuery('예천군에서 농사용 흙 500m³ 필요해')">예천군에서 농사용 흙 500m³ 필요해</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="loading" id="loading">
+                    <i class="fas fa-spinner"></i> 분석 중...
+                </div>
+                
+                <div class="chat-input">
+                    <input type="text" id="messageInput" placeholder="토사 관련 질문을 입력하세요..." autocomplete="off">
+                    <button id="sendButton" onclick="sendMessage()">
+                            <i class="fas fa-paper-plane"></i>
+                        </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 지도 섹션 -->
+        <div class="map-section">
+            <div class="map-container">
+                <!-- 지도 헤더 -->
+                <div class="map-header">
+                    <h1><i class="fas fa-map-marked-alt"></i> 토석정보 매칭 제안</h1>
+                    <p>매칭된 토사 공급처를 지도에서 확인하세요!</p>
+                </div>
+                
+                <!-- 지도 영역 -->
+                <div class="map-content">
+                    <div id="map"></div>
+                    <div class="map-info" id="mapInfo">
+                        토사 매칭 결과가 여기에 표시됩니다.
+                    </div>
+                    
+                    <!-- 경로 표시 버튼 -->
+                    <button class="route-toggle-btn" id="routeToggleBtn" onclick="toggleRoutes()" title="경로 표시/숨김">
+                        <i class="fas fa-route"></i>
+                    </button>
+                    
+                    <!-- 토지 이용 현황 버튼 -->
+                    <button class="landuse-toggle-btn" id="landuseToggleBtn" onclick="toggleLanduse()" title="토지 이용 현황 보기">
+                        <i class="fas fa-seedling"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 전역 변수
+        let map;
+        let markers = [];
+        let routePolylines = [];
+        let userLocation = null;
+        let currentMatchingResult = null;
+        let totalDuration = 0; // 총 소요시간 (초)
+        let routeCount = 0; // 완료된 경로 수
+        let currentRegion = null;
+        let isRouteMode = false;
+        let isLanduseMode = false;
+        
+        // 경로 API 결과 캐싱
+        const routeCache = new Map();
+
+        // 지도 초기화
+        function initMap() {
+            const container = document.getElementById('map');
+            const options = {
+                center: new kakao.maps.LatLng(37.5665, 126.9780), // 서울 시청
+                level: 8
+            };
+            
+            map = new kakao.maps.Map(container, options);
+            console.log('지도 초기화 완료');
+        }
+
+        // 토사 마커 추가
+        function addSoilMarkers(soilData) {
+            clearMarkers();
+            
+            if (!soilData || soilData.length === 0) {
+                document.getElementById("mapInfo").innerHTML = "표시할 토사 데이터가 없습니다.";
+                return;
+            }
+
+            // 중복 제거된 데이터 사용 (테이블과 동일한 로직)
+            const deduplicatedData = deduplicateAndSort(soilData);
+
+            // 같은 위치의 마커들을 오프셋시키는 함수
+            const offsetMarkers = (markers) => {
+                const positionMap = new Map();
+                return markers.map((marker, index) => {
+                    const key = `${marker.lat}_${marker.lng}`;
+                    if (positionMap.has(key)) {
+                        // 같은 위치면 약간씩 오프셋
+                        const offset = positionMap.get(key) * 0.0001; // 약 10m씩 이동
+                        return {
+                            ...marker,
+                            lat: marker.lat + offset,
+                            lng: marker.lng + offset
+                        };
+                    } else {
+                        positionMap.set(key, 1);
+                        return marker;
+                    }
+                });
+            };
+
+            // 마커 오프셋 적용
+            const offsetData = offsetMarkers(deduplicatedData);
+
+            const colors = ['#FF0000', '#00FF00', '#0000FF', '#FFFF00', '#FF00FF', '#00FFFF', '#FFA500', '#800080'];
+            
+            offsetData.forEach((item, index) => {
+                if (item.lat && item.lng) {
+                    const color = colors[index % colors.length];
+                    const position = new kakao.maps.LatLng(item.lat, item.lng);
+                    
+                    // 직접 목적지인지 경유지인지 구분
+                    const isDirect = item.is_direct || false;
+                    const markerType = isDirect ? "목적지" : "경유지";
+                    const markerIcon = isDirect ? "🎯" : "📍";
+                    
+                    // 마커 생성
+                    const marker = new kakao.maps.Marker({
+                        position: position,
+                            map: map,
+                        title: `${item.name}`
+                    });
+                    
+                    // 순위별 색상 설정
+                    const rankColors = ['#FFD700', '#C0C0C0', '#CD7F32', '#4CAF50', '#2196F3']; // 금, 은, 동, 초록, 파랑
+                    const rankColor = rankColors[index] || '#6c757d';
+                    const rank = index + 1;
+                    
+                    // 마커 번호 및 순위 표시
+                    const markerNumber = new kakao.maps.CustomOverlay({
+                        position: position,
+                        content: `<div style="
+                            background: ${rankColor}; 
+                            color: white; 
+                            width: 35px; 
+                            height: 35px; 
+                            border-radius: 50%; 
+                            display: flex; 
+                            align-items: center; 
+                            justify-content: center; 
+                            font-weight: bold; 
+                            font-size: 14px; 
+                            border: 3px solid white;
+                            box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+                        ">${rank}</div>`,
+                        yAnchor: 0.5
+                    });
+                    
+                    markerNumber.setMap(map);
+                    
+                    // 마커 클릭 시 상세 정보 표시
+                    const infoWindow = new kakao.maps.InfoWindow({
+                        content: `<div style="
+                            background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+                            border: 2px solid #e9ecef;
+                            border-radius: 8px;
+                            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+                            padding: 12px;
+                            min-width: 200px;
+                            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                            position: relative;
+                        ">
+                            <button id="closeBtn_${index}" 
+                                    style="
+                                        position: absolute; 
+                                        top: 6px; 
+                                        right: 6px; 
+                                        background: #dc3545; 
+                                        color: white; 
+                                        border: none; 
+                                        border-radius: 50%; 
+                                        width: 20px; 
+                                        height: 20px; 
+                                        font-size: 12px; 
+                                        cursor: pointer; 
+                                        display: flex; 
+                                        align-items: center; 
+                                        justify-content: center; 
+                                        line-height: 1; 
+                                        z-index: 1000;
+                                        transition: all 0.2s ease;
+                                        box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+                                    " 
+                                    onmouseover="this.style.background='#c82333'; this.style.transform='scale(1.1)'" 
+                                    onmouseout="this.style.background='#dc3545'; this.style.transform='scale(1)'">×</button>
+                            
+                            <div style="
+                                margin: 0 0 8px 0; 
+                                color: #2c3e50; 
+                                font-size: 14px; 
+                                font-weight: 700; 
+                                padding-right: 25px; 
+                                line-height: 1.2;
+                                border-bottom: 1px solid #e9ecef;
+                                padding-bottom: 6px;
+                            ">
+                                <span class="badge" style="background-color: ${rankColor}; color: white; font-size: 10px; margin-right: 8px;">${rank}순위</span>
+                                ${item.name}
+                            </div>
+                            
+                            <div style="line-height: 1.4;">
+                                <div style="
+                                    margin-bottom: 6px; 
+                                    padding: 4px 8px; 
+                                    background: #f8f9fa; 
+                                    border-radius: 4px; 
+                                    border-left: 3px solid #007bff;
+                                    display: flex;
+                                    justify-content: space-between;
+                                    align-items: center;
+                                ">
+                                    <span style="color: #6c757d; font-weight: 600; font-size: 11px;">용량</span>
+                                    <span style="color: #2c3e50; font-weight: 700; font-size: 13px;">${(item.capacity_m3 || 0).toLocaleString()}m³ (${item.soil_type})</span>
+                                </div>
+                                
+                                <div style="
+                                    margin-bottom: 6px; 
+                                    padding: 4px 8px; 
+                                    background: #f8f9fa; 
+                                    border-radius: 4px; 
+                                    border-left: 3px solid #28a745;
+                                    display: flex;
+                                    justify-content: space-between;
+                                    align-items: center;
+                                ">
+                                    <span style="color: #6c757d; font-weight: 600; font-size: 11px;">거리</span>
+                                    <span style="color: #2c3e50; font-weight: 700; font-size: 13px;">${item.distance_km}km</span>
+                                </div>
+                                
+                                <div style="
+                                    padding: 4px 8px; 
+                                    background: #f8f9fa; 
+                                    border-radius: 4px; 
+                                    border-left: 3px solid #6c757d;
+                                    display: flex; 
+                                    justify-content: space-between;
+                                    align-items: center;
+                                ">
+                                    <span style="color: #6c757d; font-weight: 600; font-size: 11px;">운송비</span>
+                                    <span style="color: #2c3e50; font-weight: 700; font-size: 13px;">${calculateTransportCost((currentMatchingResult?.route?.entities?.volume_m3) || 500, item.distance_km).toLocaleString()}원</span>
+                                </div>
+                            </div>
+                        </div>`,
+                        position: position
+                    });
+                    
+                    kakao.maps.event.addListener(marker, 'click', function() {
+                        infoWindow.open(map, marker);
+                        
+                        // 닫기 버튼 이벤트 추가 (약간의 지연 후)
+                        setTimeout(() => {
+                            const closeBtn = document.getElementById(`closeBtn_${index}`);
+                            if (closeBtn) {
+                                closeBtn.addEventListener('click', function() {
+                                    infoWindow.close();
+                                });
+                            }
+                        }, 100);
+                    });
+                    
+                    markers.push(marker);
+                    markers.push(markerNumber);
+                }
+            });
+            
+            // 지도 범위 조정
+            if (markers.length > 0) {
+                const bounds = new kakao.maps.LatLngBounds();
+                deduplicatedData.forEach(item => {
+                    if (item.lat && item.lng) {
+                        bounds.extend(new kakao.maps.LatLng(item.lat, item.lng));
+                    }
+                });
+                
+                // 사용자 위치도 포함
+                if (userLocation) {
+                    bounds.extend(new kakao.maps.LatLng(userLocation.lat, userLocation.lng));
+                }
+                
+                map.setBounds(bounds);
+            }
+            
+            document.getElementById("mapInfo").innerHTML = `${deduplicatedData.length}개의 토사 공급처가 표시되었습니다.`;
+        }
+
+        // 마커 제거
+        function clearMarkers() {
+            markers.forEach(marker => {
+                marker.setMap(null);
+            });
+            markers = [];
+        }
+
+        // 경로 표시 토글 함수
+        function toggleRoutes() {
+            const routeBtn = document.getElementById('routeToggleBtn');
+            
+            if (isRouteMode) {
+                // 경로 표시 모드 해제
+                isRouteMode = false;
+                routeBtn.classList.remove('active');
+                clearRoutes();
+                document.getElementById("mapInfo").innerHTML = "토사 매칭 결과가 여기에 표시됩니다.";
+            } else {
+                // 경로 표시 모드 활성화
+                isRouteMode = true;
+                routeBtn.classList.add('active');
+                showRoutes(currentMatchingResult?.table);
+                document.getElementById("mapInfo").innerHTML = "경로가 표시되었습니다.";
+            }
+        }
+
+        // 사용자 위치 마커 표시 함수 (안전한 버전)
+        function showUserLocationMarker() {
+            if (!userLocation) return;
+            
+            // 기존 사용자 마커 제거
+            const existingUserMarker = markers.find(marker => marker.isUserLocation);
+            if (existingUserMarker) {
+                existingUserMarker.setMap(null);
+                const index = markers.indexOf(existingUserMarker);
+                if (index > -1) markers.splice(index, 1);
+            }
+            
+            // 사용자 위치 마커 생성 (기본 마커 사용 - 안전함)
+            const userMarker = new kakao.maps.Marker({
+                position: new kakao.maps.LatLng(userLocation.lat, userLocation.lng),
+                map: map,
+                title: `🚛 출발지: ${userLocation.address || '사용자 위치'}`,
+                zIndex: 15
+            });
+            
+            userMarker.isUserLocation = true;
+            markers.push(userMarker);
+            
+            // 사용자 위치 정보창 (닫기 버튼 포함)
+            const userInfoWindow = new kakao.maps.InfoWindow({
+                content: `<div style="
+                    background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+                    color: white;
+                    padding: 12px 16px;
+                    border-radius: 12px;
+                    font-size: 13px;
+                    font-weight: bold;
+                    text-align: center;
+                    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+                    position: relative;
+                    min-width: 200px;
+                    border: 2px solid #3498db;
+                ">
+                    <button id="closeUserLocationBtn" 
+                            style="
+                                position: absolute; 
+                                top: 6px; 
+                                right: 6px; 
+                                background: rgba(255,255,255,0.2); 
+                                color: white; 
+                                border: none; 
+                                border-radius: 50%; 
+                                width: 24px; 
+                                height: 24px; 
+                                font-size: 14px; 
+                                cursor: pointer; 
+                                display: flex; 
+                                align-items: center; 
+                                justify-content: center; 
+                                line-height: 1; 
+                                z-index: 1000;
+                                transition: all 0.2s ease;
+                            " 
+                            onmouseover="this.style.background='rgba(255,255,255,0.3)'" 
+                            onmouseout="this.style.background='rgba(255,255,255,0.2)'">×</button>
+                    
+                    <div style="margin: 0 0 8px 0; padding-right: 30px; color: #3498db;">
+                        🚛 <strong>출발지</strong>
+                    </div>
+                    <div style="
+                        background: rgba(52, 152, 219, 0.2);
+                        padding: 6px 8px;
+                        border-radius: 6px;
+                        font-size: 11px;
+                        font-weight: normal;
+                        border: 1px solid rgba(52, 152, 219, 0.3);
+                    ">
+                        ${userLocation.address || '사용자 위치'}
+                    </div>
+                </div>`,
+                position: new kakao.maps.LatLng(userLocation.lat, userLocation.lng)
+            });
+            
+            kakao.maps.event.addListener(userMarker, 'click', function() {
+                userInfoWindow.open(map, userMarker);
+                
+                // 닫기 버튼 이벤트 추가 (약간의 지연 후)
+                setTimeout(() => {
+                    const closeBtn = document.getElementById('closeUserLocationBtn');
+                    if (closeBtn) {
+                        closeBtn.addEventListener('click', function() {
+                            userInfoWindow.close();
+                        });
+                    }
+                }, 100);
+            });
+        }
+
+        // 중복 제거 및 정렬 함수 (공통 사용)
+        function deduplicateAndSort(rows) {
+            if (!rows || !rows.length) return [];
+            
+            // 중복 제거: project_id 기반으로 고유한 공급처만 선택
+            const uniqueSuppliers = new Map();
+            rows.forEach(item => {
+                if (item.lat && item.lng && item.name) {
+                    // project_id가 있으면 project_id 기반, 없으면 name 기반으로 키 생성 (usage 포함)
+                    const key = item.project_id ? 
+                        `${item.project_id}_${item.usage || 'default'}_${item.is_direct ? 'direct' : 'waypoint'}` :
+                        `${item.name}_${item.usage || 'default'}_${item.is_direct ? 'direct' : 'waypoint'}`;
+                    
+                    const existingItem = uniqueSuppliers.get(key);
+                    
+                    if (!existingItem) {
+                        // 첫 번째 항목
+                        uniqueSuppliers.set(key, item);
+                    } else {
+                        // 기존 항목과 비교하여 더 좋은 점수 선택
+                        const currentScore = parseFloat(item.score) || 0;
+                        const existingScore = parseFloat(existingItem.score) || 0;
+                        
+                        if (currentScore > existingScore) {
+                            // 더 높은 점수면 교체
+                            uniqueSuppliers.set(key, item);
+                        }
+                    }
+                }
+            });
+
+            const uniqueRows = Array.from(uniqueSuppliers.values());
+            console.log(`중복 제거: ${rows.length}개 → ${uniqueRows.length}개`);
+            
+            // 점수 순으로 정렬
+            uniqueRows.sort((a, b) => {
+                const scoreA = parseFloat(a.score) || 0;
+                const scoreB = parseFloat(b.score) || 0;
+                return scoreB - scoreA; // 내림차순
+            });
+            
+            return uniqueRows;
+        }
+
+        // 경로 표시 함수 (중복 제거 및 최적화)
+        function showRoutes(rows) {
+            console.log('showRoutes 호출됨:', { userLocation, rows, rowsLen: rows?.length });
+            if (!userLocation || !rows || !rows.length) {
+                console.log('경로 표시 데이터 부족', { userLocation, rowsLen: rows?.length });
+                return;
+            }
+
+            clearRoutes(); // 기존 경로 제거
+            
+            // 사용자 위치 마커 표시
+            showUserLocationMarker();
+
+            // 중복 제거 및 정렬
+            const uniqueRows = deduplicateAndSort(rows);
+
+            // 직접 목적지와 경유지 구분
+            const directDestinations = uniqueRows.filter(item => item.is_direct);
+            const waypoints = uniqueRows.filter(item => !item.is_direct);
+            
+            console.log(`직접 목적지: ${directDestinations.length}개, 경유지: ${waypoints.length}개`);
+
+            const colors = ['#28a745', '#007bff', '#FF0000', '#00FF00', '#0000FF', '#FFFF00', '#FF00FF', '#00FFFF', '#FFA500', '#800080'];
+            
+            // 직접 목적지 경로 (녹색)
+            directDestinations.forEach((item, index) => {
+                if (item.lat && item.lng) {
+                    drawRoute(userLocation.lat, userLocation.lng, item.lat, item.lng, colors[0], item.name, 'direct');
+                }
+            });
+            
+            // 경유지 경로 (파란색)
+            waypoints.forEach((item, index) => {
+                if (item.lat && item.lng) {
+                    drawRoute(userLocation.lat, userLocation.lng, item.lat, item.lng, colors[1], item.name, 'waypoint');
+                }
+            });
+            
+            // 지도 중심을 사용자 위치로 이동
+            const userLatLng = new kakao.maps.LatLng(userLocation.lat, userLocation.lng);
+            map.setCenter(userLatLng);
+            map.setLevel(8); // 적절한 확대 레벨
+        }
+
+        // 경로 데이터에서 실제 경로 그리기 함수
+        function drawRouteFromData(data, color, name, routeType = 'waypoint') {
+                    // 경로 정보 추출
+                const routes = data.data.routes;
+                if (!routes || routes.length === 0) {
+                    console.warn(`${name}: 경로 데이터 없음`);
+                    return;
+                }
+                
+                const route = routes[0];
+                const sections = route.sections;
+                if (!sections || sections.length === 0) {
+                    console.warn(`${name}: 섹션 데이터 없음`);
+                    return;
+                }
+                
+                const section = sections[0];
+                const roads = section.roads;
+                if (!roads || roads.length === 0) {
+                    console.warn(`${name}: 도로 데이터 없음`);
+                    return;
+                }
+                    
+                    // 실제 도로 경로 좌표 배열
+                    const path = [];
+                roads.forEach(road => {
+                    const vertexes = road.vertexes;
+                    for (let i = 0; i < vertexes.length; i += 2) {
+                        if (i + 1 < vertexes.length) {
+                            const x = vertexes[i];     // 경도(lng)
+                            const y = vertexes[i + 1]; // 위도(lat)
+                            // LatLng는 (lat, lng) 순서!
+                            path.push(new kakao.maps.LatLng(y, x));
+                        }
+                    }
+                });
+                
+                if (path.length === 0) {
+                    console.warn(`${name}: 경로 좌표 없음`);
+                    return;
+                }
+                
+                // 디버깅: 좌표 확인
+                console.log(`${name}: 경로 좌표 확인`, path.slice(0, 3));
+                    
+                    // 폴리라인으로 경로 표시
+                    const polyline = new kakao.maps.Polyline({
+                        path: path,
+                    strokeWeight: 6,
+                        strokeColor: color,
+                    strokeOpacity: 0.9,
+                    strokeStyle: 'solid', // 실제 도로는 실선
+                    zIndex: 5
+                    });
+                    
+                    polyline.setMap(map);
+                    routePolylines.push(polyline);
+                    
+                    // 경로 정보 (거리, 시간)
+                    const distance = section.distance; // 미터 단위
+                    const duration = section.duration; // 초 단위
+                    
+            // 거리와 시간을 적절한 단위로 변환
+            const distanceKm = (distance / 1000).toFixed(1);
+            const durationMin = Math.round(duration / 60);
+            
+            console.log(`${name}: ${distanceKm}km, ${durationMin}분 경로 표시 완료`);
+            
+            // 경로 정보를 폴리라인에 저장 (나중에 사용할 수 있도록)
+            polyline.routeInfo = {
+                name: name,
+                distance: distanceKm,
+                duration: durationMin,
+                type: routeType
+            };
+        }
+
+        // 개별 경로 그리기 함수 (캐싱 포함)
+        function drawRoute(startLat, startLng, endLat, endLng, color, name, routeType = 'waypoint') {
+            console.log(`경로 그리기 시작: ${name} (${startLat}, ${startLng}) → (${endLat}, ${endLng}) - 타입: ${routeType}`);
+            
+            // 캐시 키 생성 (좌표 기반)
+            const cacheKey = `${startLat.toFixed(4)},${startLng.toFixed(4)}-${endLat.toFixed(4)},${endLng.toFixed(4)}`;
+            
+            // 캐시 확인
+            if (routeCache.has(cacheKey)) {
+                console.log(`${name}: 캐시된 경로 사용`);
+                const cachedData = routeCache.get(cacheKey);
+                drawRouteFromData(cachedData, color, name, routeType);
+                return;
+            }
+            
+            // 서버에서 실제 도로 경로 가져오기
+            fetch('/directions', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    origin_lat: startLat,
+                    origin_lng: startLng,
+                    dest_lat: endLat,
+                    dest_lng: endLng
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    console.warn(`${name}: 서버 API 실패 - ${data.message}`);
+                    drawStraightRoute(startLat, startLng, endLat, endLng, color, name);
+                    return;
+                }
+                
+                console.log(`${name}: 서버 Directions API 성공`);
+                
+                // 캐시에 저장
+                routeCache.set(cacheKey, data);
+                
+                // 경로 데이터 처리
+                drawRouteFromData(data, color, name, routeType);
+            })
+            .catch(error => {
+                console.error(`${name}: 서버 API 오류`, error);
+                    drawStraightRoute(startLat, startLng, endLat, endLng, color, name);
+            });
+        }
+        
+        // 직선 경로 대체 함수 (API 실패 시)
+        function drawStraightRoute(startLat, startLng, endLat, endLng, color, name) {
+            const startPoint = new kakao.maps.LatLng(startLat, startLng);
+            const endPoint = new kakao.maps.LatLng(endLat, endLng);
+            const path = [startPoint, endPoint];
+            
+            const polyline = new kakao.maps.Polyline({
+                path: path,
+                strokeWeight: 6,
+                strokeColor: color,
+                strokeOpacity: 0.9,
+                strokeStyle: 'dashed',
+                zIndex: 5
+            });
+            
+            polyline.setMap(map);
+            routePolylines.push(polyline);
+            
+            const distance = calculateDistance(startLat, startLng, endLat, endLng);
+            const midLat = (startLat + endLat) / 2;
+            const midLng = (startLng + endLng) / 2;
+            const midPoint = new kakao.maps.LatLng(midLat, midLng);
+            
+            const infoWindow = new kakao.maps.InfoWindow({
+                content: `<div style="padding: 5px; font-size: 12px; text-align: center;">
+                    <strong>${name}</strong><br>
+                    <span style="color: #dc3545;">직선거리: ${distance.toFixed(1)}km</span><br>
+                    <small style="color: #6c757d;">(실제 도로 경로 불가)</small>
+                </div>`,
+                position: midPoint
+            });
+            
+            const marker = new kakao.maps.Marker({
+                position: midPoint,
+                map: map,
+                title: `${name} - 직선거리 ${distance.toFixed(1)}km`
+            });
+            
+            kakao.maps.event.addListener(marker, 'click', function() {
+                infoWindow.open(map, marker);
+            });
+            
+            routePolylines.push(marker);
+        }
+
+        // 경로 제거 함수
+        function clearRoutes() {
+            routePolylines.forEach(item => {
+                if (item.setMap) {
+                    item.setMap(null);
+                }
+            });
+            routePolylines = [];
+            totalDuration = 0;
+            routeCount = 0;
+        }
+        
+        // 총 소요시간 및 덤프트럭 대수 업데이트 함수
+        function updateTotalDuration(duration) {
+            totalDuration += duration;
+            routeCount++;
+            
+            // 모든 경로가 완료되면 총 소요시간 및 덤프트럭 대수 표시
+            if (currentMatchingResult && currentMatchingResult.table) {
+                const expectedRoutes = currentMatchingResult.table.length;
+                if (routeCount >= expectedRoutes) {
+                    const totalMinutes = Math.floor(totalDuration / 60);
+                    const totalHours = Math.floor(totalMinutes / 60);
+                    const remainingMinutes = totalMinutes % 60;
+                    
+                    let timeText = '';
+                    if (totalHours > 0) {
+                        timeText = `${totalHours}시간 ${remainingMinutes}분`;
+                    } else {
+                        timeText = `${totalMinutes}분`;
+                    }
+                    
+                    // 덤프트럭 대수 계산 (요청량 기준)
+                    const demandVolume = currentMatchingResult?.route?.entities?.volume_m3 || 500; // 기본값 500m³
+                    const dumpTruckCount = Math.ceil(demandVolume / 25); // 25m³당 1대
+                    
+                    document.getElementById("mapInfo").innerHTML = 
+                        `${expectedRoutes}개의 토사 공급처와 경로가 표시되었습니다.<br>
+                         <strong style="color: #28a745;">총 예상소요시간: ${timeText}</strong><br>
+                         <strong style="color: #ffc107;">🚛 필요 덤프트럭: ${dumpTruckCount}대 (${demandVolume}m³ 기준)</strong>`;
+                }
+            }
+        }
+
+        // 진행률에 따른 색상 반환 함수
+        function getProgressColor(progress) {
+            if (progress >= 80) return '#28a745'; // 녹색
+            if (progress >= 60) return '#ffc107'; // 노란색
+            if (progress >= 40) return '#fd7e14'; // 주황색
+            return '#dc3545'; // 빨간색
+        }
+        
+        // 숫자 포맷팅 함수
+        function formatNumber(num) {
+            if (!num) return '0';
+            return num.toLocaleString();
+        }
+        
+        // 운송비 계산 함수 (새로운 산식)
+        function calculateTransportCost(soilVolume, distance) {
+            if (!soilVolume || !distance) return 0;
+            
+            // 기본 공식: 5 + 3.7142857 * 운반거리
+            const baseFormula = 5 + 3.7142857 * distance;
+            
+            // 3개 항목 계산
+            const item1 = Math.trunc(Math.round(48567 / Math.round(720.144 / Math.round(14.56 + Math.round(baseFormula, 2), 2), 2), 1) + 383);
+            const item2 = Math.trunc(Math.round(57077 / Math.round(720.144 / Math.round(14.56 + Math.round(baseFormula, 2), 2), 2), 1) + 808.9);
+            const item3 = Math.trunc(Math.round(32323 / Math.round(720.144 / Math.round(14.56 + Math.round(baseFormula, 2), 2), 2), 1) + 483.5);
+            
+            // 최종 계산: 토석량 * (항목1 + 항목2 + 항목3)
+            return Math.trunc(soilVolume * (item1 + item2 + item3));
+        }
+
+        // 거리 계산 함수 (Haversine 공식)
+        function calculateDistance(lat1, lng1, lat2, lng2) {
+            const R = 6371; // 지구 반지름 (km)
+            const dLat = (lat2 - lat1) * Math.PI / 180;
+            const dLng = (lng2 - lng1) * Math.PI / 180;
+            const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                    Math.sin(dLng/2) * Math.sin(dLng/2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+            return R * c;
+        }
+
+        // 토지 이용 현황 토글 함수
+        function toggleLanduse() {
+            const landuseBtn = document.getElementById('landuseToggleBtn');
+            
+            if (isLanduseMode) {
+                isLanduseMode = false;
+                landuseBtn.classList.remove('active');
+                document.getElementById("mapInfo").innerHTML = "토사 매칭 결과가 여기에 표시됩니다.";
+            } else {
+                isLanduseMode = true;
+                landuseBtn.classList.add('active');
+                loadLanduseData();
+            }
+        }
+
+        // 토지 이용 현황 데이터 로드
+        function loadLanduseData() {
+            console.log('=== 토지 이용 현황 데이터 로드 시작 ===');
+            document.getElementById("mapInfo").innerHTML = "토지 이용 현황 데이터를 불러오는 중...";
+            
+            // 현재 매칭 결과에서 주소 추출
+            if (!currentResults || !currentResults.results || currentResults.results.length === 0) {
+                console.log('결과가 없습니다.');
+                document.getElementById("mapInfo").innerHTML = "매칭 결과가 없습니다.";
+                return;
+            }
+            
+            console.log('현재 결과:', currentResults);
+            
+            // 출발지와 목적지 주소 수집
+            const addresses = [];
+            
+            // 출발지 주소 추가 (detailed_address 우선 사용)
+            if (currentResults.origin) {
+                const originAddress = currentResults.origin.detailed_address || currentResults.origin.address;
+                console.log('출발지 주소:', originAddress);
+                addresses.push(originAddress);
+            }
+            
+            // 목적지 주소들 추가 (상위 3개)
+            currentResults.results.slice(0, 3).forEach((result, index) => {
+                console.log(`목적지 ${index + 1} 주소:`, result.address);
+                addresses.push(result.address);
+            });
+            
+            console.log('전체 주소 목록:', addresses);
+            
+            // 주소에서 지역 추출 및 중복 제거
+            const regions = extractRegionsFromAddresses(addresses);
+            const uniqueRegions = deduplicateRegions(regions);
+            
+            console.log('=== 토지 이용 현황 디버깅 ===');
+            console.log('수집된 주소들:', addresses);
+            console.log('추출된 지역들:', regions);
+            console.log('중복 제거된 지역들:', uniqueRegions);
+            console.log('총 주소 개수:', addresses.length);
+            console.log('총 지역 개수:', regions.length);
+            console.log('중복 제거 후 지역 개수:', uniqueRegions.length);
+            
+            if (uniqueRegions.length === 0) {
+                document.getElementById("mapInfo").innerHTML = "지역 정보를 추출할 수 없습니다.";
+                return;
+            }
+            
+            // 각 지역별로 토지 이용 현황 데이터 요청
+            const promises = uniqueRegions.map(region => 
+                fetch(`/landuse/${encodeURIComponent(region)}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        console.log(`지역 ${region} API 응답:`, data);
+                        return { region, data };
+                    })
+                    .catch(error => {
+                        console.error(`지역 ${region} API 오류:`, error);
+                        return { region, error: error.message };
+                    })
+            );
+            
+            Promise.all(promises).then(results => {
+                displayLanduseData(results);
+            });
+        }
+        
+        // 주소에서 지역 추출
+        function extractRegionsFromAddresses(addresses) {
+            const regions = [];
+            
+            addresses.forEach(address => {
+                const region = extractRegionFromAddress(address);
+                if (region) {
+                    regions.push(region);
+                }
+            });
+            
+            return regions;
+        }
+        
+        // 개별 주소에서 최하위 행정구역 추출
+        function extractRegionFromAddress(address) {
+            console.log('주소 추출 시도:', address);
+            
+            // 주소에서 괄호나 특수문자 제거
+            const cleanAddress = address.replace(/\([^)]*\)/g, '').replace(/[^\w\s가-힣]/g, ' ').trim();
+            console.log('정리된 주소:', cleanAddress);
+            
+            // 1단계: 리/동 추출 (가장 구체적)
+            let riMatch = cleanAddress.match(/([가-힣]+(?:리|동))/);
+            if (riMatch) {
+                const ri = riMatch[1];
+                console.log('리/동 발견:', ri);
+                
+                // 읍/면/동 찾기
+                const eupMyeonDongMatch = cleanAddress.match(/([가-힣]+(?:읍|면|동))/);
+                if (eupMyeonDongMatch) {
+                    const eupMyeonDong = eupMyeonDongMatch[1];
+                    console.log('읍/면/동 발견:', eupMyeonDong);
+                    
+                    // 시/군/구 찾기 (특별시/광역시 제외) - 간단하고 확실한 방법
+                    const siGunGuMatch = cleanAddress.match(/([가-힣]+(?:시|군|구))(?![가-힣]*(?:특별시|광역시))/);
+                    if (siGunGuMatch) {
+                        const siGunGu = siGunGuMatch[1];
+                        console.log('시/군/구 발견:', siGunGu);
+                        
+                        // 도 찾기 (서울특별시, 부산광역시 등 포함)
+                        let doMatch = cleanAddress.match(/([가-힣]+(?:특별자치도|특별시|광역시|도))/);
+                        if (!doMatch) {
+                            // 서울 약칭 처리
+                            if (cleanAddress.includes('서울')) {
+                                doMatch = ['서울', '서울특별시'];
+                            }
+                            // 경북 약칭 처리
+                            else if (cleanAddress.includes('경북')) {
+                                doMatch = ['경북', '경상북도'];
+                            }
+                        }
+                        
+                        if (doMatch) {
+                            const doName = doMatch[1] === '서울' ? '서울특별시' : 
+                                          doMatch[1] === '경북' ? '경상북도' : doMatch[1];
+                            
+                            // 리와 동이 다른 경우 (구역단위4가 있는 경우)
+                            if (ri !== eupMyeonDong) {
+                                const result = `${doName} ${siGunGu} ${eupMyeonDong} ${ri}`;
+                                console.log('패턴 매칭 (구역단위4):', result);
+                                return result;
+                            } else {
+                                // 리와 동이 같은 경우 (구역단위3까지만 있는 경우)
+                                const result = `${doName} ${siGunGu} ${eupMyeonDong}`;
+                                console.log('패턴 매칭 (구역단위3):', result);
+                                return result;
+                            }
+                        }
+                    }
+                }
+            }
+            
+            // 2단계: 읍/면/동까지만 (구역단위3)
+            const eupMyeonDongMatch = cleanAddress.match(/([가-힣]+(?:읍|면|동))/);
+            if (eupMyeonDongMatch) {
+                const eupMyeonDong = eupMyeonDongMatch[1];
+                console.log('읍/면/동 발견 (2단계):', eupMyeonDong);
+                
+                const siGunGuMatch = cleanAddress.match(/([가-힣]+(?:시|군|구))(?![가-힣]*(?:특별시|광역시))/);
+                if (siGunGuMatch) {
+                    const siGunGu = siGunGuMatch[1];
+                    console.log('시/군/구 발견 (2단계):', siGunGu);
+                    
+                    let doMatch = cleanAddress.match(/([가-힣]+(?:특별자치도|특별시|광역시|도))/);
+                    if (!doMatch) {
+                        if (cleanAddress.includes('서울')) {
+                            doMatch = ['서울', '서울특별시'];
+                        }
+                        else if (cleanAddress.includes('경북')) {
+                            doMatch = ['경북', '경상북도'];
+                        }
+                    }
+                    
+                    if (doMatch) {
+                        const doName = doMatch[1] === '서울' ? '서울특별시' : 
+                                      doMatch[1] === '경북' ? '경상북도' : doMatch[1];
+                        const result = `${doName} ${siGunGu} ${eupMyeonDong}`;
+                        console.log('패턴 매칭 (구역단위3):', result);
+                        return result;
+                    }
+                }
+            }
+            
+            // 3단계: 시/군/구까지만 (구역단위2)
+            const siGunGuMatch = cleanAddress.match(/([가-힣]+(?:시|군|구))(?![가-힣]*(?:특별시|광역시))/);
+            if (siGunGuMatch) {
+                const siGunGu = siGunGuMatch[1];
+                console.log('시/군/구 발견 (3단계):', siGunGu);
+                
+                let doMatch = cleanAddress.match(/([가-힣]+(?:특별자치도|특별시|광역시|도))/);
+                if (!doMatch) {
+                    if (cleanAddress.includes('서울')) {
+                        doMatch = ['서울', '서울특별시'];
+                    }
+                    else if (cleanAddress.includes('경북')) {
+                        doMatch = ['경북', '경상북도'];
+                    }
+                }
+                
+                if (doMatch) {
+                    const doName = doMatch[1] === '서울' ? '서울특별시' : 
+                                  doMatch[1] === '경북' ? '경상북도' : doMatch[1];
+                    const result = `${doName} ${siGunGu}`;
+                    console.log('패턴 매칭 (구역단위2):', result);
+                    return result;
+                }
+            }
+            
+            console.log('매칭 실패:', address);
+            return null;
+        }
+        
+        // 중복 지역 제거 (같은 최하위 행정구역이면 하나만 유지)
+        function deduplicateRegions(regions) {
+            const uniqueRegions = [];
+            const seen = new Set();
+            
+            regions.forEach(region => {
+                if (!seen.has(region)) {
+                    seen.add(region);
+                    uniqueRegions.push(region);
+                }
+            });
+            
+            console.log('중복 제거 전:', regions);
+            console.log('중복 제거 후:', uniqueRegions);
+            
+            return uniqueRegions;
+        }
+        
+        // 토지 이용 현황 데이터 표시
+        function displayLanduseData(results) {
+            console.log('displayLanduseData 호출, results:', results);
+            
+            const validResults = results.filter(result => !result.error && result.data && !result.data.error);
+            
+            console.log('유효한 결과 개수:', validResults.length);
+            console.log('유효한 결과들:', validResults);
+            
+            if (validResults.length === 0) {
+                document.getElementById("mapInfo").innerHTML = "토지 이용 현황 데이터를 찾을 수 없습니다.";
+                return;
+            }
+            
+            let html = '<div class="landuse-results">';
+            
+            validResults.forEach(({ region, data }, index) => {
+                html += `
+                    <div class="landuse-chart-container">
+                        <div class="landuse-chart-title">${region}</div>
+                        <div class="landuse-chart-wrapper">
+                            <canvas id="landuseChart${index}"></canvas>
+                        </div>
+                        <div class="landuse-legend">
+                            <div class="landuse-legend-item">
+                                <div class="landuse-legend-color" style="background-color: #28a745;"></div>
+                                <span><strong>논:</strong> ${data.data.논}ha (${data.data.논_비율}%)</span>
+                            </div>
+                            <div class="landuse-legend-item">
+                                <div class="landuse-legend-color" style="background-color: #ffc107;"></div>
+                                <span><strong>밭:</strong> ${data.data.밭}ha (${data.data.밭_비율}%)</span>
+                            </div>
+                            <div class="landuse-legend-item">
+                                <div class="landuse-legend-color" style="background-color: #17a2b8;"></div>
+                                <span><strong>과수:</strong> ${data.data.과수}ha (${data.data.과수_비율}%)</span>
+                            </div>
+                            <div class="landuse-legend-item">
+                                <div class="landuse-legend-color" style="background-color: #dc3545;"></div>
+                                <span><strong>초지:</strong> ${data.data.초지}ha (${data.data.초지_비율}%)</span>
+                            </div>
+                            <div class="landuse-legend-item">
+                                <div class="landuse-legend-color" style="background-color: #6c757d;"></div>
+                                <span><strong>임지:</strong> ${data.data.임지}ha (${data.data.임지_비율}%)</span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            html += '</div>';
+            document.getElementById("mapInfo").innerHTML = html;
+            
+            // 차트 생성
+            createLanduseCharts(validResults);
+        }
+        
+        // 토지 이용 현황 차트 생성
+        function createLanduseCharts(validResults) {
+            console.log('차트 생성 시작, validResults 개수:', validResults.length);
+            
+            // Chart.js 로딩 대기
+            let retryCount = 0;
+            const maxRetries = 10;
+            
+            const createCharts = () => {
+                if (typeof Chart === 'undefined') {
+                    retryCount++;
+                    if (retryCount >= maxRetries) {
+                        console.error('Chart.js 로드 실패: 최대 재시도 횟수 초과');
+                        return;
+                    }
+                    setTimeout(createCharts, 200);
+                    return;
+                }
+                
+                console.log('Chart.js 로드 완료, 차트 생성 시작');
+                
+                // DOM이 완전히 렌더링될 때까지 대기
+            setTimeout(() => {
+                    validResults.forEach(({ region, data }, index) => {
+                        console.log(`차트 생성 시도: index=${index}, region=${region}`);
+                        createLanduseChart(index, data.data, region);
+                    });
+                }, 200);
+            };
+            
+            setTimeout(createCharts, 500);
+        }
+        
+        // 개별 토지 이용 현황 차트 생성
+        function createLanduseChart(index, landuse, region) {
+            const ctx = document.getElementById(`landuseChart${index}`);
+            if (!ctx) {
+                console.error(`Canvas 요소를 찾을 수 없습니다: landuseChart${index}`);
+                return;
+            }
+            
+            console.log(`차트 생성 중: index=${index}, region=${region}, landuse=`, landuse);
+            
+            // 기존 차트가 있다면 제거
+            if (ctx.chart) {
+                ctx.chart.destroy();
+            }
+            
+            try {
+                const chart = new Chart(ctx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['논', '밭', '과수', '초지', '임지'],
+                        datasets: [{
+                            data: [landuse.논, landuse.밭, landuse.과수, landuse.초지, landuse.임지],
+                            backgroundColor: [
+                                '#28a745', // 논 - 녹색
+                                '#ffc107', // 밭 - 노란색
+                                '#17a2b8', // 과수 - 청색
+                                '#dc3545', // 초지 - 빨간색
+                                '#6c757d'  // 임지 - 회색
+                            ],
+                            borderWidth: 2,
+                            borderColor: '#fff'
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                display: false // 범례는 HTML로 별도 표시
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        const label = context.label || '';
+                                        const value = context.parsed;
+                                        const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                        const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
+                                        return `${label}: ${value}ha (${percentage}%)`;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+                
+                // 차트 인스턴스를 canvas 요소에 저장
+                ctx.chart = chart;
+                console.log(`차트 생성 완료: index=${index}, region=${region}`);
+            } catch (error) {
+                console.error(`차트 생성 오류: index=${index}, region=${region}`, error);
+            }
+        }
+
+        // DOM 요소
+        const chatMessages = document.getElementById('chatMessages');
+        const messageInput = document.getElementById('messageInput');
+        const sendButton = document.getElementById('sendButton');
+        const loading = document.getElementById('loading');
+
+        // 메시지 전송
+        function sendMessage() {
+            const message = messageInput.value.trim();
+            if (!message) return;
+
+            // 사용자 메시지 추가
+            addMessage(message, 'user');
+            messageInput.value = '';
+
+            // 로딩 표시
+            showLoading();
+
+            // API 호출
+            fetch('/ask', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ text: message })
+            })
+            .then(response => response.json())
+            .then(data => {
+                hideLoading();
+                handleResponse(data);
+            })
+            .catch(error => {
+                hideLoading();
+                addMessage('죄송합니다. 오류가 발생했습니다. 다시 시도해주세요.', 'bot');
+                console.error('Error:', error);
+            });
+        }
+
+        // 예시 쿼리 전송
+        function sendExampleQuery(query) {
+            messageInput.value = query;
+            sendMessage();
+        }
+
+        // 메시지 추가
+        function addMessage(content, sender) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${sender}`;
+            
+            const avatar = document.createElement('div');
+            avatar.className = 'message-avatar';
+            avatar.innerHTML = sender === 'user' ? '<i class="fas fa-user"></i>' : '<i class="fas fa-robot"></i>';
+            
+            const messageContent = document.createElement('div');
+            messageContent.className = 'message-content';
+            messageContent.innerHTML = content;
+            
+            messageDiv.appendChild(avatar);
+            messageDiv.appendChild(messageContent);
+            chatMessages.appendChild(messageDiv);
+            
+            // 스크롤을 맨 아래로
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        // 응답 처리
+        function handleResponse(data) {
+            if (data.error) {
+                addMessage(`오류: ${data.message}`, 'bot');
+                return;
+            }
+
+            let responseText = '';
+
+            // 의도별 응답 처리
+            if (data.route && data.route.intent === 'MATCH_FIND') {
+                // 지역 정보 저장
+                if (data.route.entities && data.route.entities.region) {
+                    currentRegion = data.route.entities.region;
+                }
+                
+                if (data.table && data.table.length > 0) {
+                    responseText = `🔍 <strong>토사 매칭 결과</strong><br><br>`;
+                    
+                    // 사용자 위치 정보 저장
+                    if (data.user_location) {
+                        userLocation = data.user_location;
+                        console.log('사용자 위치 설정:', userLocation);
+                    }
+                    
+                    // 요약 정보
+                    if (data.summary) {
+                        responseText += `<small class="text-muted">${data.summary.join(', ')}</small><br><br>`;
+                    }
+                    
+                    // 결과 테이블
+                    responseText += `<div class="result-table">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>순위</th>
+                                    <th>공급처</th>
+                                    <th>거리</th>
+                                    <th>가용 공급량<br><small>(㎥)</small></th>
+                                    <th>토석유형</th>
+                                    <th>적합용도</th>
+                                    <th>운송비<br><small>(원/㎥·km)</small></th>
+                                </tr>
+                            </thead>
+                            <tbody>`;
+                    
+                    // 중복 제거된 데이터 사용 (지도와 동일한 로직)
+                    const deduplicatedData = deduplicateAndSort(data.table);
+                    deduplicatedData.forEach((item, index) => {
+                        // 진행률에 따른 색상 결정
+                        const progressRatio = item.progress_ratio || 0;
+                        const progressPercent = Math.round(progressRatio * 100);
+                        let progressColor = '#6c757d'; // 기본 회색
+                        if (progressRatio > 0.8) progressColor = '#dc3545'; // 빨간색 (긴급)
+                        else if (progressRatio > 0.6) progressColor = '#fd7e14'; // 주황색 (주의)
+                        else if (progressRatio > 0.4) progressColor = '#ffc107'; // 노란색 (보통)
+                        else if (progressRatio > 0.2) progressColor = '#20c997'; // 청록색 (여유)
+                        else progressColor = '#28a745'; // 초록색 (여유)
+                        
+                        // 운송비 계산 (새로운 산식 적용)
+                        const userVolume = data.route?.entities?.volume_m3 || 500; // 사용자 요청량
+                        const calculatedTransportCost = calculateTransportCost(userVolume, item.distance_km);
+                        const transportCost = calculatedTransportCost.toLocaleString();
+                        
+                        // 공급처 명을 더 읽기 쉽게 처리
+                        const supplierName = item.name || '알 수 없음';
+                        const displayName = supplierName.length > 20 ? 
+                            supplierName.substring(0, 20) + '...' : 
+                            supplierName;
+                        
+                        // 유형 정보 결정
+                        const isDirect = item.is_direct;
+                        const typeText = isDirect ? '단독' : '경유지';
+                        const typeColor = isDirect ? '#28a745' : '#007bff';
+                        const typeIcon = isDirect ? '🎯' : '🔄';
+                        
+                        // 조합 정보 처리
+                        let combinationInfo = '';
+                        if (item.combination_details && !isDirect) {
+                            const details = item.combination_details;
+                            const waypointNames = details.waypoints.map(wp => `${wp.name} (${wp.volume}m³)`).join(', ');
+                            const finalInfo = `${details.final_destination.name} (${details.final_destination.volume}m³)`;
+                            combinationInfo = `<br><small style="color: #6c757d; font-size: 11px;">
+                                ${waypointNames}<br>
+                                최종목적지: ${finalInfo}
+                            </small>`;
+                        }
+                        
+                        // 순위 정보
+                        const rank = index + 1;
+                        const rankColors = ['#FFD700', '#C0C0C0', '#CD7F32', '#4CAF50', '#2196F3']; // 금, 은, 동, 초록, 파랑
+                        const rankColor = rankColors[index] || '#6c757d';
+                        
+                        responseText += `
+                            <tr>
+                                <td><span class="badge rank-badge" style="background-color: ${rankColor}; color: white; font-weight: bold; font-size: 12px; display: block; margin: 0 auto; text-align: center; width: fit-content;">${rank}순위</span></td>
+                                <td class="col-supplier" title="${supplierName}${combinationInfo}">${displayName}${combinationInfo}</td>
+                                <td>${item.distance_km}km</td>
+                                <td><strong style="color: #007bff;">${(item.current_capacity_m3 || 0).toLocaleString()}</strong></td>
+                                <td>${item.type || '불명'}</td>
+                                <td>${item.usage || '불명'}</td>
+                                <td><strong style="color: #dc3545;">${transportCost}</strong></td>
+                            </tr>`;
+                    });
+                    
+                    responseText += `</tbody></table></div>`;
+                    
+                    // 지도에 마커 표시
+                    addSoilMarkers(data.table);
+                    
+                    // 매칭 결과 저장 (경로 표시용)
+                    currentMatchingResult = data;
+                    console.log('매칭 결과 저장 완료:', currentMatchingResult);
+                    
+                    // 토지 이용 현황용 결과 저장
+                    currentResults = {
+                        origin: data.origin || data.user_location,
+                        results: data.table || []
+                    };
+                    console.log('토지 이용 현황용 결과 저장 완료:', currentResults);
+                    
+                    // 경로 표시 (중복 실행 제거)
+                    if (data.user_location && data.table?.length) {
+                        console.log('경로 표시 시작');
+                            
+                            // 경로 표시 모드 활성화
+                            isRouteMode = true;
+                            const routeBtn = document.getElementById('routeToggleBtn');
+                            if (routeBtn) {
+                                routeBtn.classList.add('active');
+                            }
+                            
+                        // 단일 경로 표시 실행
+                        showRoutes(data.table);
+                        
+                        // 덤프트럭 대수 계산 (요청량 기준)
+                        const demandVolume = data.route?.entities?.volume_m3 || 500; // 기본값 500m³
+                        const dumpTruckCount = Math.ceil(demandVolume / 25); // 25m³당 1대
+                        
+                        document.getElementById("mapInfo").innerHTML = 
+                            `${data.table.length}개의 토사 공급처와 경로가 표시되었습니다.<br>
+                             <strong style="color: #ffc107;">🚛 필요 덤프트럭: ${dumpTruckCount}대 (${demandVolume}m³ 기준)</strong>`;
+                    }
+                } else {
+                    responseText = `😔 조건에 맞는 토사 공급처를 찾을 수 없습니다.<br><br>`;
+                    if (data.suggestions) {
+                        responseText += `<strong>제안:</strong><br>`;
+                        data.suggestions.forEach(suggestion => {
+                            responseText += `• ${suggestion}<br>`;
+                        });
+                    }
+                    clearMarkers();
+                    document.getElementById("mapInfo").innerHTML = "매칭된 토사 공급처가 없습니다.";
+                }
+            } else if (data.route && data.route.intent === 'SMALLTALK') {
+                responseText = `안녕하세요! TOBARO 토석 매칭 챗봇입니다. 🏔️<br>토사 관련 질문을 해주시면 도움을 드릴게요!`;
+            } else if (data.route && data.route.intent === 'LAW_QA') {
+                responseText = `📋 <strong>법규 문의</strong><br><br>죄송합니다. 법규 관련 기능은 준비 중입니다.<br>현재는 토사 매칭 서비스만 이용하실 수 있습니다.`;
+            } else if (data.followup) {
+                responseText = data.followup;
+                if (data.suggestions) {
+                    responseText += `<br><br><strong>도움말:</strong><br>`;
+                    data.suggestions.forEach(suggestion => {
+                        responseText += `• ${suggestion}<br>`;
+                    });
+                }
+            } else {
+                responseText = data.message || '응답을 처리할 수 없습니다.';
+            }
+
+            addMessage(responseText, 'bot');
+        }
+
+        // 로딩 표시/숨김
+        function showLoading() {
+            loading.style.display = 'block';
+        }
+
+        function hideLoading() {
+            loading.style.display = 'none';
+        }
+
+        // 이벤트 리스너
+        sendButton.addEventListener('click', sendMessage);
+        messageInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                sendMessage();
+            }
+        });
+
+        // 입력창 포커스
+        messageInput.focus();
+        
+        // 페이지 로드 시 카카오맵 API 로드
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('SCRIPT READY: showRoutes is', typeof showRoutes);
+            kakao.maps.load(function() {
+                console.log('카카오맵 API 로드 완료');
+                initMap();
+            });
+        });
+    </script>
+</body>
+</html>
