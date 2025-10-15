@@ -1,7 +1,7 @@
 from flask import Flask, request, jsonify, render_template
 from router import hybrid_route, RouteResult
 from matcher import rank_candidates, geocode_user_address
-from store import load_candidates
+from store import load_candidates, query_candidates_by_conditions
 from cache import get_cached_route_result, cache_route_result, get_cached_matching_result, cache_matching_result
 from config import get_config
 import pandas as pd
@@ -135,8 +135,27 @@ def ask():
                 print(f"추출된 엔티티: {route.entities.model_dump()}")
                 print(f"신뢰도: {route.confidence}")
                 
-                candidates = load_candidates()
-                print(f"후보 데이터 로드 완료: {len(candidates)}개")
+                # 조건부 조회 시도
+                entities = route.entities
+                try:
+                    candidates = query_candidates_by_conditions(
+                        region=entities.region,
+                        soil_type=entities.soil_type,
+                        usage=entities.usage,
+                        volume_m3=entities.volume_m3,
+                        limit=3000  # 토석 데이터 조회 (2800개 + 여유분 200개)
+                    )
+                    print(f"조건부 조회 완료: {len(candidates)}개")
+                    
+                    # 조건부 조회 결과가 적으면 전체 데이터 로드
+                    if len(candidates) < 10:
+                        print("조건부 조회 결과가 적어서 전체 데이터 로드...")
+                        candidates = load_candidates()
+                        print(f"전체 데이터 로드 완료: {len(candidates)}개")
+                except Exception as e:
+                    print(f"조건부 조회 실패, 전체 데이터 로드: {e}")
+                    candidates = load_candidates()
+                    print(f"후보 데이터 로드 완료: {len(candidates)}개")
                 
                 # 매칭 결과 캐시 확인
                 cached_matching = get_cached_matching_result(route.entities.model_dump(), candidates)
@@ -746,5 +765,4 @@ def _get_landuse_by_region_from_csv(region):
 
 if __name__ == "__main__":
     # For local run
-    port = int(os.environ.get("PORT", 5000))
-    app.run(host="0.0.0.0", port=port, debug=False)
+    app.run(host="0.0.0.0", port=5000, debug=True)
