@@ -91,7 +91,9 @@ def _load_supabase_data() -> pd.DataFrame:
         # 실시간 진행률 계산
         processed['progress_ratio_today'] = processed.apply(calculate_progress_ratio, axis=1)
         
-        # 오늘 기준 토석량 계산 (진행률 * 총량)
+        # 오늘 기준 토석량 계산 (진행률 * 총량) - 데이터 타입 변환 추가
+        processed['progress_ratio_today'] = pd.to_numeric(processed['progress_ratio_today'], errors='coerce')
+        processed['total_volume_m3'] = pd.to_numeric(processed['total_volume_m3'], errors='coerce')
         processed['current_volume_today'] = processed['progress_ratio_today'] * processed['total_volume_m3']
         
         # 매칭용 컬럼으로 변환
@@ -163,7 +165,9 @@ def _load_real_data() -> pd.DataFrame:
     # 실시간 진행률 계산
     processed['progress_ratio_today'] = processed.apply(calculate_progress_ratio, axis=1)
     
-    # 오늘 기준 토석량 계산 (진행률 * 총량)
+    # 오늘 기준 토석량 계산 (진행률 * 총량) - 데이터 타입 변환 추가
+    processed['progress_ratio_today'] = pd.to_numeric(processed['progress_ratio_today'], errors='coerce')
+    processed['total_volume_m3'] = pd.to_numeric(processed['total_volume_m3'], errors='coerce')
     processed['current_volume_today'] = processed['progress_ratio_today'] * processed['total_volume_m3']
     
     # 매칭용 컬럼으로 변환
