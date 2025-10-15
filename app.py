@@ -143,7 +143,7 @@ def ask():
                         soil_type=entities.soil_type,
                         usage=entities.usage,
                         volume_m3=entities.volume_m3,
-                        limit=3000  # 토석 데이터 조회 (2800개 + 여유분 200개)
+                        limit=1000  # 메모리 절약을 위해 줄임
                     )
                     print(f"조건부 조회 완료: {len(candidates)}개")
                     
