@@ -1937,10 +1937,22 @@
         // 페이지 로드 시 카카오맵 API 로드
         document.addEventListener('DOMContentLoaded', function() {
             console.log('SCRIPT READY: showRoutes is', typeof showRoutes);
-            kakao.maps.load(function() {
-                console.log('카카오맵 API 로드 완료');
-                initMap();
-            });
+            
+            // Kakao Map API 로딩 대기
+            function waitForKakao() {
+                if (typeof kakao !== 'undefined' && kakao.maps) {
+                    console.log('카카오맵 API 로드 완료');
+                    kakao.maps.load(function() {
+                        console.log('카카오맵 초기화 완료');
+                        initMap();
+                    });
+                } else {
+                    console.log('카카오맵 API 로딩 대기 중...');
+                    setTimeout(waitForKakao, 100);
+                }
+            }
+            
+            waitForKakao();
         });
     </script>
 </body>
