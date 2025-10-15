@@ -20,6 +20,10 @@ def calculate_progress_ratio(row) -> float:
         duration_days = pd.to_numeric(row['duration_days'], errors='coerce')
         rate_model = pd.to_numeric(row['rate_model_code'], errors='coerce')
         
+        # NaN 체크
+        if pd.isna(duration_days) or duration_days <= 0:
+            return 0.0
+        
         # 기본 진행률 계산
         if today < start_date:
             base_progress = 0.0
@@ -55,22 +59,129 @@ def load_candidates() -> pd.DataFrame:
     else:
         raise FileNotFoundError(f"데이터 파일이 없습니다: {config.REAL_DATA_PATH} 또는 {config.SAMPLE_DATA_PATH}")
 
+def query_candidates_by_conditions(region=None, soil_type=None, usage=None, volume_m3=None, limit=3000) -> pd.DataFrame:
+    """
+    조건에 맞는 토사 후보 데이터를 Supabase에서 직접 조회합니다.
+    """
+    try:
+        # Supabase 클라이언트 생성
+        supabase: Client = create_client(config.SUPABASE_URL, config.SUPABASE_KEY)
+        
+        # 기본 쿼리 생성
+        query = supabase.table('soil_data').select('*')
+        
+        # 조건별 필터링
+        if region:
+            query = query.ilike('address', f'%{region}%')
+        if soil_type:
+            query = query.eq('soil_category', soil_type)
+        if usage:
+            query = query.eq('usage', usage)
+        if volume_m3:
+            query = query.gte('total_volume_m3', volume_m3)
+        
+        # 결과 제한
+        query = query.limit(limit)
+        
+        print(f"Supabase 조건부 조회: region={region}, soil_type={soil_type}, usage={usage}, volume_m3={volume_m3}")
+        response = query.execute()
+        
+        if not response.data:
+            print("조건에 맞는 데이터를 찾을 수 없습니다.")
+            return pd.DataFrame()
+        
+        # DataFrame으로 변환
+        df = pd.DataFrame(response.data)
+        print(f"조건부 조회 성공: {len(df)}행")
+        
+        # 필요한 컬럼만 선택하고 매칭용으로 변환
+        try:
+            processed = df[['project_id', 'project_name', 'soil_category', 'type', 'subtype', 
+                           'usage', 'total_volume_m3', 'inout_status', 'address', 
+                           'occurrence_start', 'occurrence_end', 'duration_days', 'rate_model_code',
+                           'lat', 'lng']].copy()
+            print("컬럼 선택 성공")
+        except KeyError as e:
+            print(f"컬럼 선택 실패: {e}")
+            print("사용 가능한 컬럼들:")
+            for col in df.columns:
+                print(f"  - {col}")
+            raise
+        
+        # 실시간 진행률 계산
+        processed['progress_ratio_today'] = processed.apply(calculate_progress_ratio, axis=1)
+        
+        # 오늘 기준 토석량 계산 (진행률 * 총량) - 데이터 타입 변환 추가
+        processed['progress_ratio_today'] = pd.to_numeric(processed['progress_ratio_today'], errors='coerce')
+        processed['total_volume_m3'] = pd.to_numeric(processed['total_volume_m3'], errors='coerce')
+        processed['current_volume_today'] = processed['progress_ratio_today'] * processed['total_volume_m3']
+        
+        # 매칭용 컬럼으로 변환
+        processed['name'] = processed['project_name']
+        processed['inout_type'] = processed['inout_status'].apply(_convert_inout_to_type)
+        processed['volume_m3'] = processed['total_volume_m3']
+        processed['soil_type'] = processed['soil_category']
+        processed['usage'] = processed['usage']
+        processed['lon'] = processed['lng']
+        
+        # NaN 값 처리
+        processed['lat'] = processed['lat'].fillna(config.DEFAULT_LAT)
+        processed['lon'] = processed['lon'].fillna(config.DEFAULT_LON)
+        processed['volume_m3'] = processed['volume_m3'].fillna(0)
+        processed['progress_ratio_today'] = processed['progress_ratio_today'].fillna(0)
+        processed['current_volume_today'] = processed['current_volume_today'].fillna(0)
+        
+        # 필수 컬럼만 반환
+        return processed[['project_id', 'name', 'type', 'inout_type', 'lat', 'lon', 'volume_m3', 'soil_type', 'usage', 'address', 'progress_ratio_today', 'current_volume_today', 'inout_status']]
+        
+    except Exception as e:
+        print(f"조건부 조회 실패: {e}")
+        # 실패 시 전체 데이터 로드로 폴백
+        print("전체 데이터 로드로 폴백...")
+        return _load_supabase_data()
+
 def _load_supabase_data() -> pd.DataFrame:
     """Supabase에서 토석 데이터를 조회하여 매칭용으로 변환"""
     try:
         # Supabase 클라이언트 생성
         supabase: Client = create_client(config.SUPABASE_URL, config.SUPABASE_KEY)
         
-        # soil_data 테이블에서 모든 데이터 조회
+        # soil_data 테이블에서 모든 데이터 조회 (페이지네이션으로 전체 로드)
         print("Supabase에서 토석 데이터 조회 중...")
-        response = supabase.table('soil_data').select('*').execute()
+        all_data = []
+        page_size = 1000
+        offset = 0
         
-        if not response.data:
+        while True:
+            print(f"페이지네이션 시도: offset={offset}, page_size={page_size}")
+            try:
+                # limit/offset 방식 사용 (더 안전함)
+                response = supabase.table('soil_data').select('*').limit(page_size).offset(offset).execute()
+                print(f"응답 데이터 개수: {len(response.data) if response.data else 0}")
+            except Exception as e:
+                print(f"limit/offset 실패, range() 시도: {e}")
+                response = supabase.table('soil_data').select('*').range(offset, offset + page_size).execute()
+                print(f"range() 응답 데이터 개수: {len(response.data) if response.data else 0}")
+            
+            if not response.data:
+                print("더 이상 데이터가 없음")
+                break
+            all_data.extend(response.data)
+            print(f"현재까지 누적 데이터: {len(all_data)}개")
+            
+            if len(response.data) < page_size:
+                print(f"마지막 페이지 (응답 데이터 < page_size): {len(response.data)} < {page_size}")
+                break
+            offset += page_size
+        
+        print(f"총 {len(all_data)}행 로드 완료")
+        
+        if not all_data:
             print("Supabase에서 데이터를 찾을 수 없습니다.")
             raise ValueError("Supabase에서 데이터를 찾을 수 없습니다.")
         
         # DataFrame으로 변환
-        df = pd.DataFrame(response.data)
+        df = pd.DataFrame(all_data)
         print(f"Supabase 데이터 로드 성공: {len(df)}행, {len(df.columns)}열")
         print(f"컬럼명: {list(df.columns)}")
         
@@ -165,9 +276,7 @@ def _load_real_data() -> pd.DataFrame:
     # 실시간 진행률 계산
     processed['progress_ratio_today'] = processed.apply(calculate_progress_ratio, axis=1)
     
-    # 오늘 기준 토석량 계산 (진행률 * 총량) - 데이터 타입 변환 추가
-    processed['progress_ratio_today'] = pd.to_numeric(processed['progress_ratio_today'], errors='coerce')
-    processed['total_volume_m3'] = pd.to_numeric(processed['total_volume_m3'], errors='coerce')
+    # 오늘 기준 토석량 계산 (진행률 * 총량)
     processed['current_volume_today'] = processed['progress_ratio_today'] * processed['total_volume_m3']
     
     # 매칭용 컬럼으로 변환
