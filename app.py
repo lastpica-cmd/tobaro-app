@@ -143,12 +143,12 @@ def ask():
                         soil_type=entities.soil_type,
                         usage=entities.usage,
                         volume_m3=entities.volume_m3,
-                        limit=300  # 메모리 절약을 위해 더 줄임 (1000 → 300)
+                        limit=100  # ULTRA 메모리 절약을 위해 극단적으로 줄임 (300 → 100)
                     )
                     print(f"조건부 조회 완료: {len(candidates)}개")
                     
                     # 조건부 조회 결과가 적으면 전체 데이터 로드
-                    if len(candidates) < 5:  # 더 적극적으로 조건부 조회 사용 (10 → 5)
+                    if len(candidates) < 2:  # ULTRA 적극적으로 조건부 조회 사용 (5 → 2)
                         print("조건부 조회 결과가 적어서 전체 데이터 로드...")
                         candidates = load_candidates()
                         print(f"전체 데이터 로드 완료: {len(candidates)}개")
