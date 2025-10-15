@@ -149,7 +149,7 @@ def _load_supabase_data() -> pd.DataFrame:
         # soil_data 테이블에서 모든 데이터 조회 (페이지네이션으로 전체 로드)
         print("Supabase에서 토석 데이터 조회 중...")
         all_data = []
-        page_size = 100  # Changed from 200 to 100 for ULTRA memory optimization
+        page_size = 50   # Changed from 100 to 50 for ULTRA EXTREME memory optimization
         offset = 0
         
         while True:
