@@ -1113,8 +1113,8 @@
         function drawRoute(startLat, startLng, endLat, endLng, color, name, routeType = 'waypoint') {
             console.log(`경로 그리기 시작: ${name} (${startLat}, ${startLng}) → (${endLat}, ${endLng}) - 타입: ${routeType}`);
             
-            // 캐시 키 생성 (좌표 기반)
-            const cacheKey = `${startLat.toFixed(4)},${startLng.toFixed(4)}-${endLat.toFixed(4)},${endLng.toFixed(4)}`;
+            // 캐시 키 생성 (좌표 기반) - 타입 변환 추가
+            const cacheKey = `${Number(startLat).toFixed(4)},${Number(startLng).toFixed(4)}-${Number(endLat).toFixed(4)},${Number(endLng).toFixed(4)}`;
             
             // 캐시 확인
             if (routeCache.has(cacheKey)) {
